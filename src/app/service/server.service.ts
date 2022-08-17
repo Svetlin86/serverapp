@@ -8,9 +8,8 @@ import { Server } from '../interface/server';
 
 @Injectable({providedIn: 'root'})
 export class ServerService {
-  private readonly apiUrl = 'any'; /// !!!!!!!!!!!!!!!!WEAKPOINT
+  private readonly apiUrl = 'http://localhost:8080'; //backend URL
   
-
   constructor(private http: HttpClient) { }
 
   //define a method to retrieve all of the servers
