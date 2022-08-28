@@ -1,9 +1,13 @@
 import { Component, OnInit } from '@angular/core';
-import { catchError, map, Observable, of, startWith } from 'rxjs';
+import { BehaviorSubject, catchError, map, Observable, of, startWith } from 'rxjs';
 import { DataState } from './enum/data.state.enum';
+import { Status } from './enum/status.enum';
 import { AppState } from './interface/app-state';
 import { CustomResponse } from './interface/custom-response';
+import { Server } from './interface/server';
 import { ServerService } from './service/server.service';
+import { NgForm } from '@angular/forms';
+
 
 @Component({
   selector: 'app-root',
@@ -13,12 +17,21 @@ import { ServerService } from './service/server.service';
 export class AppComponent implements OnInit {
   appState$: Observable<AppState<CustomResponse>>;// <-Entire APP state
 
+  readonly DataState = DataState;
+  readonly Status = Status;
+  private filterSubject = new BehaviorSubject<string>('');
+  private dataSubject = new BehaviorSubject<CustomResponse>(null);
+  filterStatus$ = this.filterSubject.asObservable();
+  private isLoading = new BehaviorSubject<boolean>(false);
+  isLoading$ = this.isLoading.asObservable();
+
   constructor(private serverService: ServerService) { } // needed for dependency injection for the service created
 
   ngOnInit(): void { // lifecycle hook 
     this.appState$ = this.serverService.servers$
       .pipe(
         map(response => {
+          this.dataSubject.next(response);
           return { dataState: DataState.LOADED_STATE, appData: response }
         }),
         startWith({ dataState: DataState.LOADING_STATE }),
@@ -29,6 +42,73 @@ export class AppComponent implements OnInit {
   }
 
 
-  
+  pingServer(ipAddress: string): void {
+    this.filterSubject.next(ipAddress);
+    this.appState$ = this.serverService.ping$(ipAddress)
+      .pipe(
+        map(response => {
+          const index = this.dataSubject.value.data.servers.findIndex(server =>  server.id === response.data.server.id);
+          this.dataSubject.value.data.servers[index] = response.data.server;
+          // this.notifier.onDefault(response.message);
+          this.filterSubject.next('');
+          return { dataState: DataState.LOADED_STATE, appData: this.dataSubject.value }
+        }),
+        startWith({ dataState: DataState.LOADED_STATE, appData: this.dataSubject.value }),
+        catchError((error: string) => {
+          this.filterSubject.next('');
+          // this.notifier.onError(error);
+          return of({ dataState: DataState.ERROR_STATE, error });
+        })
+      );
+  }
+
+  filterServers(status: Status): void {
+    this.appState$ = this.serverService.filter$(status, this.dataSubject.value)
+      .pipe(
+        map(response => {
+          // this.notifier.onDefault(response.message);
+          return { dataState: DataState.LOADED_STATE, appData: response };
+        }),
+        startWith({ dataState: DataState.LOADED_STATE, appData: this.dataSubject.value }),
+        catchError((error: string) => {
+          // this.notifier.onError(error);
+          return of({ dataState: DataState.ERROR_STATE, error });
+        })
+      );
+  }
+
+
+  deleteServer(server: Server): void {
+    this.appState$ = this.serverService.delete$(server.id)
+      .pipe(
+        map(response => {
+          this.dataSubject.next(
+            { ...response, data: 
+              { servers: this.dataSubject.value.data.servers.filter(s => s.id !== server.id)} }
+          );
+          // this.notifier.onDefault(response.message);
+          return { dataState: DataState.LOADED_STATE, appData: this.dataSubject.value }
+        }),
+        startWith({ dataState: DataState.LOADED_STATE, appData: this.dataSubject.value }),
+        catchError((error: string) => {
+          // this.notifier.onError(error);
+          return of({ dataState: DataState.ERROR_STATE, error });
+        })
+      );
+  }
+
+  printReport(): void {
+    // this.notifier.onDefault('Report downloaded');
+    // window.print();
+    let dataType = 'application/vnd.ms-excel.sheet.macroEnabled.12';
+    let tableSelect = document.getElementById('servers');
+    let tableHtml = tableSelect.outerHTML.replace(/ /g, '%20');
+    let downloadLink = document.createElement('a');
+    document.body.appendChild(downloadLink);
+    downloadLink.href = 'data:' + dataType + ', ' + tableHtml;
+    downloadLink.download = 'server-report.xls';
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+  }
 
 }
