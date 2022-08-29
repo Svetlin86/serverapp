@@ -17,9 +17,9 @@
                         </a>
 
 
-                        <!-- (ngModelChange)="filterServers($event)" -->
+                        
                         <span>
-                            <select name="status" ngModel="ALL"
+                            <select (ngModelChange)="filterServers($event)" name="status" ngModel="ALL"
                                 class="btn btn-info" style="height: 32.91px;"> 
                                 <option value="ALL">ALL</option>
                                 <option value="SERVER_UP">SERVER UP</option>
@@ -64,10 +64,9 @@
                                 </td>
                                 <td>
                                     <a (click)="pingServer(server.ipAddress)" style="cursor: pointer;">
-                                        <i *ngIf="(filterStatus$ | async) === '' || (filterStatus$ | async) !== server.ipAddress"
-                                            class="material-icons" title="Ping server">&#xe328;</i>
-                                        <i *ngIf="(filterStatus$ | async) === server.ipAddress"
-                                            class="fa fa-spinner fa-spin" style="font-size:24px"></i>
+                                        <i *ngIf="(filterStatus$ | async) === '' || (filterStatus$ | async) !== server.ipAddress" class="material-icons"
+                                            title="Ping server">&#xe328;</i>
+                                        <i *ngIf="(filterStatus$ | async) === server.ipAddress" class="fa fa-spinner fa-spin" style="font-size:24px"></i>
                                     </a>
                                 </td>
                                 <td>
@@ -143,3 +142,4 @@
         </div>
     </div>
 </div>
+<notifier-container></notifier-container>
