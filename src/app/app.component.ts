@@ -64,13 +64,35 @@ export class AppComponent implements OnInit {
 
   filterServers(status: Status): void {
     this.appState$ = this.serverService.filter$(status, this.dataSubject.value)
-      .pipe(
+    .pipe(
         map(response => {
           // this.notifier.onDefault(response.message);
-          return { dataState: DataState.LOADED_STATE, appData: response };
+          return { dataState: DataState.LOADED_STATE, appData: response }
         }),
         startWith({ dataState: DataState.LOADED_STATE, appData: this.dataSubject.value }),
         catchError((error: string) => {
+          // this.notifier.onError(error);
+          return of({ dataState: DataState.ERROR_STATE, error });
+        })
+      );
+  }
+
+   saveServer(serverForm: NgForm): void {
+    this.isLoading.next(true);
+    this.appState$ = this.serverService.save$(serverForm.value as Server)
+      .pipe(
+        map(response => {
+          this.dataSubject.next(
+            {... response, data: {servers: [response.data.server, ...this.dataSubject.value.data.servers] } }
+          );
+          document.getElementById('closeModal').click();
+          this.isLoading.next(false);
+          serverForm.resetForm({ status: this.Status.SERVER_DOWN });
+          return { dataState: DataState.LOADED_STATE, appData: this.dataSubject.value }
+        }),
+        startWith({ dataState: DataState.LOADED_STATE, appData: this.dataSubject.value }),
+        catchError((error: string) => {
+          this.isLoading.next(false);
           // this.notifier.onError(error);
           return of({ dataState: DataState.ERROR_STATE, error });
         })
